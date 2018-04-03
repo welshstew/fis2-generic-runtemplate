@@ -4,6 +4,7 @@ metadata:
   labels:
     group: com.nullendpoint
     project: ${APPLICATION_NAME}
+    app: ${APPLICATION_NAME}
     provider: fabric8
     version: 1.0
   name: ${APPLICATION_NAME}
@@ -12,6 +13,7 @@ spec:
   selector:
     group: com.nullendpoint
     project: ${APPLICATION_NAME}
+    app: ${APPLICATION_NAME}
     provider: fabric8
   strategy:
     activeDeadlineSeconds: 21600
@@ -28,6 +30,7 @@ spec:
       labels:
         group: com.nullendpoint
         project: ${APPLICATION_NAME}
+        app: ${APPLICATION_NAME}
         provider: fabric8
         version: 1.0
     spec:
