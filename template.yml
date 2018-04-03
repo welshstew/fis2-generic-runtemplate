@@ -1,0 +1,138 @@
+---
+apiVersion: v1
+kind: Template
+metadata:
+  annotations:
+    maven.fabric8.io/app-catalog: "true"
+  name: fis2-generic-runtemplate
+objects:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    labels:
+      group: com.nullendpoint
+      project: ${APPLICATION_NAME}
+      provider: fabric8
+      version: "1.0"
+    name: ${APPLICATION_NAME}
+  spec:
+    ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      group: com.nullendpoint
+      project: ${APPLICATION_NAME}
+      provider: fabric8
+    sessionAffinity: None
+    type: ClusterIP
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      group: com.nullendpoint
+      project: ${APPLICATION_NAME}
+      provider: fabric8
+      version: "1.0"
+    name: ${APPLICATION_NAME}
+  spec:
+    replicas: 1
+    selector:
+      group: com.nullendpoint
+      project: ${APPLICATION_NAME}
+      provider: fabric8
+    strategy:
+      activeDeadlineSeconds: 21600
+      resources: {}
+      rollingParams:
+        intervalSeconds: 1
+        maxSurge: 25%
+        maxUnavailable: 25%
+        timeoutSeconds: 10800
+        updatePeriodSeconds: 1
+      type: Rolling
+    template:
+      metadata:
+        labels:
+          group: com.nullendpoint
+          project: ${APPLICATION_NAME}
+          provider: fabric8
+          version: "1.0"
+      spec:
+        containers:
+        - env:
+          - name: KUBERNETES_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          - name: JAVA_APP_DIR
+            value: /deployments
+          image: ${REGISTRY_IP}:5000/${IMAGESTREAM_NAMESPACE}/${APPLICATION_NAME}:${IMAGESTREAM_TAG}
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 180
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: spring-boot
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          - containerPort: 8778
+            name: jolokia
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: "1"
+            requests:
+              cpu: 200m
+          securityContext:
+            privileged: false
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+    test: false
+    triggers:
+    - type: ConfigChange
+    - imageChangeParams:
+        automatic: true
+        containerNames:
+        - spring-boot
+        from:
+          kind: ImageStreamTag
+          name: ${APPLICATION_NAME}:${IMAGESTREAM_TAG}
+          namespace: ${IMAGESTREAM_NAMESPACE}
+      type: ImageChange
+parameters:
+- description: The name for the application.
+  name: APPLICATION_NAME
+  required: true
+- description: IP for the openshift registry
+  name: REGISTRY_IP
+  required: true
+- description: The namespace where the imagestream resides (usually the build namespace)
+  name: IMAGESTREAM_NAMESPACE
+  required: true
+- description: The imagestream tag you wish to run in the run namespace
+  name: IMAGESTREAM_TAG
+  required: true
